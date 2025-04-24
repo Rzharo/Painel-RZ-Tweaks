@@ -1,0 +1,180 @@
+Add-Type -AssemblyName PresentationFramework
+Add-Type -AssemblyName PresentationCore
+Add-Type -AssemblyName WindowsBase
+Add-Type -AssemblyName System.Drawing
+
+# Criar a janela
+[xml]$xaml = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        Title="Painel de Tweaks RZ" Height="600" Width="800" ResizeMode="NoResize" WindowStartupLocation="CenterScreen">
+    <Grid Background="#1e1e1e">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Logo -->
+        <Image Source="RzLogo_resized.png" Width="100" Height="100" Margin="10" HorizontalAlignment="Left"/>
+
+        <!-- Abas -->
+        <TabControl x:Name="Tabs" Grid.Row="1" Margin="10" Background="#2e2e2e" Foreground="White">
+            <TabItem Header="Sistema">
+                <StackPanel Margin="10">
+                    <CheckBox x:Name="chkDragFullWindows" Content="Desativar movimentação de janelas com conteúdo"/>
+                    <CheckBox x:Name="chkMenuDelay" Content="Reduzir atraso do menu"/>
+                    <CheckBox x:Name="chkMinAnimate" Content="Desativar animação de minimizar"/>
+                    <CheckBox x:Name="chkKeyboardDelay" Content="Reduzir atraso do teclado"/>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="Privacidade">
+                <StackPanel Margin="10">
+                    <CheckBox x:Name="chkTelemetry" Content="Desativar Telemetria"/>
+                    <CheckBox x:Name="chkCopilot" Content="Desativar Copilot"/>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="Interface">
+                <StackPanel Margin="10">
+                    <CheckBox x:Name="chkTaskView" Content="Ocultar Botão de Tarefas"/>
+                    <CheckBox x:Name="chkNotifications" Content="Desativar Notificações"/>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="Serviços">
+                <StackPanel Margin="10">
+                    <CheckBox x:Name="chkAdobeServices" Content="Desativar Serviços Adobe"/>
+                    <CheckBox x:Name="chkRemoveOneDrive" Content="Remover OneDrive"/>
+                </StackPanel>
+            </TabItem>
+        </TabControl>
+
+        <!-- Botões -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
+            <Button x:Name="btnAplicar" Content="Aplicar Tweaks" Width="120" Margin="5" Background="#3a3a3a" Foreground="White"/>
+            <Button x:Name="btnRestaurar" Content="Desfazer Tweaks" Width="120" Margin="5" Background="#3a3a3a" Foreground="White"/>
+        </StackPanel>
+    </Grid>
+</Window>
+"@
+
+# Criar o leitor de XAML
+$reader = (New-Object System.Xml.XmlNodeReader $xaml)
+$window = [Windows.Markup.XamlReader]::Load($reader)
+
+# Controles
+$chkDragFullWindows = $window.FindName("chkDragFullWindows")
+$chkMenuDelay = $window.FindName("chkMenuDelay")
+$chkMinAnimate = $window.FindName("chkMinAnimate")
+$chkKeyboardDelay = $window.FindName("chkKeyboardDelay")
+$chkTelemetry = $window.FindName("chkTelemetry")
+$chkCopilot = $window.FindName("chkCopilot")
+$chkTaskView = $window.FindName("chkTaskView")
+$chkNotifications = $window.FindName("chkNotifications")
+$chkAdobeServices = $window.FindName("chkAdobeServices")
+$chkRemoveOneDrive = $window.FindName("chkRemoveOneDrive")
+$btnAplicar = $window.FindName("btnAplicar")
+$btnRestaurar = $window.FindName("btnRestaurar")
+
+# Aplicar Tweaks
+$btnAplicar.Add_Click({
+    # Sistema
+    if ($chkDragFullWindows.IsChecked) {
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name DragFullWindows -Value 0
+    }
+    if ($chkMenuDelay.IsChecked) {
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name MenuShowDelay -Value 200
+    }
+    if ($chkMinAnimate.IsChecked) {
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop\WindowMetrics' -Name MinAnimate -Value 0
+    }
+    if ($chkKeyboardDelay.IsChecked) {
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Keyboard' -Name KeyboardDelay -Value 0
+    }
+
+    # Privacidade
+    if ($chkTelemetry.IsChecked) {
+        Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection' -Name AllowTelemetry -Value 0 -Force
+        Set-ItemProperty -Path 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name SubscribedContent-338387Enabled -Value 0 -Force
+        Set-ItemProperty -Path 'HKCU:\SOFTWARE\Microsoft\Siuf\Rules' -Name NumberOfSIUFInPeriod -Value 0 -Force
+    }
+    if ($chkCopilot.IsChecked) {
+        Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot' -Name TurnOffWindowsCopilot -Value 1 -Force
+        Set-ItemProperty -Path 'HKCU:\Software\Policies\Microsoft\Windows\WindowsCopilot' -Name TurnOffWindowsCopilot -Value 1 -Force
+        Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name ShowCopilotButton -Value 0 -Force
+    }
+
+    # Interface
+    if ($chkTaskView.IsChecked) {
+        Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name ShowTaskViewButton -Value 0
+    }
+    if ($chkNotifications.IsChecked) {
+        Set-ItemProperty -Path 'HKCU:\Software\Policies\Microsoft\Windows\Explorer' -Name DisableNotificationCenter -Value 1
+        Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\PushNotifications' -Name ToastEnabled -Value 0
+    }
+
+    # Serviços
+    if ($chkAdobeServices.IsChecked) {
+        Get-Service -Name "AGMService","AGSService","AdobeUpdateService" -ErrorAction SilentlyContinue | Set-Service -StartupType Disabled
+    }
+    if ($chkRemoveOneDrive.IsChecked) {
+        $onedrive = "$env:SYSTEMROOT\SysWOW64\OneDriveSetup.exe"
+        if (Test-Path $onedrive) {
+            Start-Process $onedrive "/uninstall" -NoNewWindow -Wait
+        }
+    }
+
+    [System.Windows.MessageBox]::Show("Tweaks aplicados com sucesso!", "Concluído", 'OK', 'Info')
+})
+
+# Restaurar padrões
+$btnRestaurar.Add_Click({
+    # Sistema
+    if ($chkDragFullWindows.IsChecked) {
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name DragFullWindows -Value 1
+    }
+    if ($chkMenuDelay.IsChecked) {
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name MenuShowDelay -Value 400
+    }
+    if ($chkMinAnimate.IsChecked) {
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop\WindowMetrics' -Name MinAnimate -Value 1
+    }
+    if ($chkKeyboardDelay.IsChecked) {
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Keyboard' -Name KeyboardDelay -Value 1
+    }
+
+    # Privacidade
+    if ($chkTelemetry.IsChecked) {
+        Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection' -Name AllowTelemetry -Value 1 -Force
+        Set-ItemProperty -Path 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name SubscribedContent-338387Enabled -Value 1 -Force
+        Set-ItemProperty -Path 'HKCU:\SOFTWARE\Microsoft\Siuf\Rules' -Name NumberOfSIUFInPeriod -Value 1 -Force
+    }
+    if ($chkCopilot.IsChecked) {
+        Remove-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot' -Name TurnOffWindowsCopilot -ErrorAction SilentlyContinue
+        Remove-ItemProperty -Path 'HKCU:\Software\Policies\Microsoft\Windows\WindowsCopilot' -Name TurnOffWindowsCopilot -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name ShowCopilotButton -Value 1 -Force
+    }
+
+    # Interface
+    if ($chkTaskView.IsChecked) {
+        Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name ShowTaskViewButton -Value 1
+    }
+    if ($chkNotifications.IsChecked) {
+        Remove-ItemProperty -Path 'HKCU:\Software\Policies\Microsoft\Windows\Explorer' -Name DisableNotificationCenter -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\PushNotifications' -Name ToastEnabled -Value 1
+    }
+
+    # Serviços
+    if ($chkAdobeServices.IsChecked) {
+        Get-Service -Name "AGMService","AGSService","AdobeUpdateService" -ErrorAction SilentlyContinue | Set-Service -StartupType Manual
+    }
+    if ($chkRemoveOneDrive.IsChecked) {
+        $path = "$env:SYSTEMDRIVE\Users\$env:USERNAME\OneDrive"
+        if (-Not (Test-Path $path)) {
+            New-Item -Path $path -ItemType Directory -Force | Out-Null
+        }
+    }
+
+    [System.Windows.MessageBox]::Show("Tweaks restaurados com sucesso!", "Restaurado", 'OK', 'Info')
+})
+
+# Mostrar janela
+$window.ShowDialog() | Out-Null
