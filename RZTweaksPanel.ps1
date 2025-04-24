@@ -1,3 +1,5 @@
+[System.Windows.MessageBox]::Show("Script carregado!", "Status", "OK", "Info")
+
 Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName PresentationCore
 Add-Type -AssemblyName WindowsBase
